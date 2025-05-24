@@ -1,0 +1,33 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to ACR
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
+
+      - name: Build and push image
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/my-python-app:latest .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/my-python-app:latest
+
+      - name: Restart Azure Web App
+        run: |
+          az webapp restart --name <your-app-name> --resource-group <your-rg-name>
